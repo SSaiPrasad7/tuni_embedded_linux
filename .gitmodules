@@ -1,0 +1,9 @@
+[submodule "meta-pynq"]
+	path = meta-pynq
+	url = https://course-gitlab.tuni.fi/comp.ce.460-real-time-systems_2022-2023/meta-pynq.git
+[submodule "poky"]
+	path = poky
+	url = https://github.com/yoctoproject/poky.git
+[submodule "meta-xilinx"]
+	path = meta-xilinx
+	url = https://github.com/Xilinx/meta-xilinx.git

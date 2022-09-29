@@ -12,4 +12,4 @@
 - The priority of the PYNQ support layer is `5`.
 
 ## 5. What additional applications are installed to the `core-image-minimal` target in the PYNQ support layer?
-- The additional applications are board support package(meta-xilinx-bsp) and contribution layer to support for Zynq architecture(meta-xilinx-contrib).
+- The additional applications are rt-tests and dropbear.

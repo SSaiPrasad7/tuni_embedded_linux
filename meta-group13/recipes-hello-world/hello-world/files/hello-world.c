@@ -13,7 +13,6 @@
 #include <linux/kernel.h>
 #include <linux/moduleparam.h>
 #include <linux/stat.h>
- 
            
  
 MODULE_LICENSE("GPL");              ///< The license type -- this affects runtime behavior
@@ -21,13 +20,13 @@ MODULE_AUTHOR("Sai Prasad Samudrala");      ///< The author -- visible when you 
 MODULE_DESCRIPTION("A simple Linux driver for the getting parameter from user and display it.");  ///< The description -- see modinfo
 MODULE_VERSION("0.1");              ///< The version of the module
 
-module_param(name, charp, 0000); 
+static char *name = "blah";
+module_param(name, charp, 0000);
 MODULE_PARM_DESC(name, "A character string"); 
 static int __init hello_init(void) 
 { 
-    pr_info("Hello, world \n=============\n"); 
-    pr_info("Welcome to Real Time Systems: %s\n", name); 
-
+    pr_info("Hello, world \n=============\n");
+    printk(KERN_INFO "%s ,Welcome to Real Time Systems.\n", name); 
     return 0; 
 } 
 

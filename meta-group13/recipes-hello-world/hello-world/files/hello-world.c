@@ -20,15 +20,15 @@ MODULE_AUTHOR("Sai Prasad Samudrala");      ///< The author -- visible when you 
 MODULE_DESCRIPTION("A simple Linux driver for the getting parameter from user and display it.");  ///< The description -- see modinfo
 MODULE_VERSION("0.1");              ///< The version of the module
 
-static char *name = "blah";
-module_param(name, charp, 0000);
+static char *name = "Hi";
+module_param(name, charp, S_IRUGO);
 MODULE_PARM_DESC(name, "A character string"); 
 static int __init hello_init(void) 
 { 
-    pr_info("Hello, world \n=============\n");
+    printk(KERN_INFO "Hello, world \n=============\n");
     printk(KERN_INFO "%s ,Welcome to Real Time Systems.\n", name); 
     return 0; 
-} 
+}  
 
 void __exit hello_exit(void)
 {

@@ -31,7 +31,23 @@
 -  It is build using a Makefile whilst the target core-image-minimal is generated. This is due to it being listed inside the `IMAGE_INSTALL_append` list in our `build/conf/local.conf`file.
 
 ## 8. What is the path for the `sysfs` entry for the module? List and explain its contents.
-- The sysfs entry is `/sys/module/hello`.
+- The sysfs entry is `/sys/module/hello_world`.
+```
+root@pynq:~# ls -l /sys/module/hello_world
+-r--r--r--    1 root     root          4096 Oct  4 12:08 coresize
+drwxr-xr-x    2 root     root             0 Oct  4 12:08 holders
+-r--r--r--    1 root     root          4096 Oct  4 12:08 initsize
+-r--r--r--    1 root     root          4096 Oct  4 12:08 initstate
+drwxr-xr-x    2 root     root             0 Oct  4 12:08 notes
+drwxr-xr-x    2 root     root             0 Oct  4 12:08 parameters
+-r--r--r--    1 root     root          4096 Oct  4 12:08 refcnt
+drwxr-xr-x    2 root     root             0 Oct  4 12:08 sections
+-r--r--r--    1 root     root          4096 Oct  4 12:08 srcversion
+-r--r--r--    1 root     root          4096 Oct  4 12:08 taint
+--w-------    1 root     root          4096 Oct  4 12:07 uevent
+-r--r--r--    1 root     root          4096 Oct  4 12:08 version
+
+```
 - The most important files to use is the parameter directory. It provides access to each of the module parameters by exposing them as files and depending on the module allows changing them during runtime.
 - Other files and directories provide information about the modules metadata and composition (e.g. sections) or expose internal bookkeeping information (e.g. refcnt).
 

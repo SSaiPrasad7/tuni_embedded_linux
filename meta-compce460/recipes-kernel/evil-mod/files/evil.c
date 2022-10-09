@@ -18,6 +18,7 @@ int32_t bytes_stored = 0;
 // A standalone kobject for a sysfs entry
 static struct kobject* evil_kobj = NULL;
 
+
 static void do_tasklet(unsigned long data)
 {
     int32_t retval;
@@ -43,7 +44,7 @@ static void do_tasklet(unsigned long data)
 // The sysfs attribute invoked when writing
 static ssize_t store_evil(struct device *dev, struct device_attribute *attr, const char *buf, size_t count) {
     // Read the user parameters
-    sprintf(input_buf, "%s", buf);
+    sscanf(input_buf, "%s", buf);
 
     // Run a tasklet to perform string manipulation and storing the data
     tasklet_schedule(tasklet);

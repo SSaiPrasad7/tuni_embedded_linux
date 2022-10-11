@@ -44,7 +44,7 @@ static void do_tasklet(unsigned long data)
 // The sysfs attribute invoked when writing
 static ssize_t store_evil(struct device *dev, struct device_attribute *attr, const char *buf, size_t count) {
     // Read the user parameters
-    sscanf(input_buf, "%s", buf);
+    sprintf(input_buf, "%s", buf);
 
     // Run a tasklet to perform string manipulation and storing the data
     tasklet_schedule(tasklet);
@@ -56,11 +56,12 @@ static ssize_t store_evil(struct device *dev, struct device_attribute *attr, con
 static ssize_t show_evil(struct device *dev, struct device_attribute *attr, char *buf) {
     uint32_t bytes = 0;
     int32_t retval;
-
+    printk("Inside show_evil\n");
     // Go through the data storage and write all found strings to the output buffer
     while(1) {
         retval += sprintf(&buf[bytes], "%s", &data_storage[bytes]);
         if(retval == 0) {
+	    printk("loop break\n");
             break;
         }
         // Null-character excluded from the sprintf return value so 1 should be added
@@ -113,6 +114,11 @@ static int32_t __init evil_init(void)
     if(retval) {
         printk(KERN_ERR "EVIL: sysfs_create_file failed\n");
         goto error_sysfs_create;
+    }
+    /* Init the tasklet by Dynamic Method */
+    tasklet  = kmalloc(sizeof(struct tasklet_struct),GFP_KERNEL);
+    if(tasklet == NULL) {
+    	printk(KERN_ERR "EVIL: cannot allocate Memory");
     }
 
     // Initialize the tasklet

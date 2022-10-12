@@ -44,6 +44,8 @@ static void do_tasklet(unsigned long data)
 // The sysfs attribute invoked when writing
 static ssize_t store_evil(struct device *dev, struct device_attribute *attr, const char *buf, size_t count) {
     // Read the user parameters
+    if(count>=INPUT_BUFSIZE)
+       return -1;
     sprintf(input_buf, "%s", buf);
 
     // Run a tasklet to perform string manipulation and storing the data
@@ -56,12 +58,11 @@ static ssize_t store_evil(struct device *dev, struct device_attribute *attr, con
 static ssize_t show_evil(struct device *dev, struct device_attribute *attr, char *buf) {
     uint32_t bytes = 0;
     int32_t retval;
-    printk("Inside show_evil\n");
+    
     // Go through the data storage and write all found strings to the output buffer
     while(1) {
-        retval += sprintf(&buf[bytes], "%s", &data_storage[bytes]);
+        retval = sprintf(&buf[bytes], "%s", &data_storage[bytes]);
         if(retval == 0) {
-	    printk("loop break\n");
             break;
         }
         // Null-character excluded from the sprintf return value so 1 should be added
@@ -79,7 +80,7 @@ static ssize_t show_evil(struct device *dev, struct device_attribute *attr, char
 static struct device_attribute dev_attr_evil = {
     .attr = {
         .name = SYSFS_FILE_ATTR_NAME,
-        .mode = S_IRUGO,
+        .mode = S_IRUGO|S_IWUSR,
     },
     .show = show_evil,
     .store = store_evil,
@@ -151,6 +152,6 @@ module_init(evil_init);
 module_exit(evil_exit);
 
 MODULE_LICENSE("GPL");
-MODULE_DESCRIPTION("The evil kernel module for the Real-time systems course");
-MODULE_AUTHOR("Jan Lipponen <jan.lipponen@wapice.com>");
+MODULE_DESCRIPTION("Learn kernel debugging");
+MODULE_AUTHOR("Sai Prasad Samudrala,Noman Akbar");
 MODULE_VERSION("1.0");

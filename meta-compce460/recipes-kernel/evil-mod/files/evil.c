@@ -152,6 +152,6 @@ module_init(evil_init);
 module_exit(evil_exit);
 
 MODULE_LICENSE("GPL");
-MODULE_DESCRIPTION("Learn kernel debugging");
-MODULE_AUTHOR("Sai Prasad Samudrala,Noman Akbar");
+MODULE_DESCRIPTION("The evil kernel module for the Real-time systems course");
+MODULE_AUTHOR("Jan Lipponen <jan.lipponen@wapice.com>,Sai Prasad Samudrala,Noman Akbar");
 MODULE_VERSION("1.0");

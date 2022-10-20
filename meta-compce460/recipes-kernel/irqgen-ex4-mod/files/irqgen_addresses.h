@@ -7,9 +7,9 @@
 
 /* IRQ Generator register address map from irq_generator_v1_1.pdf */
 # define IRQGEN_CTRL_REG_OFFSET 0x0000 // FIXME: check in the reference documentation
-# define IRQGEN_GENIRQ_REG_OFFSET 0x0000 // FIXME: check in the reference documentation
-# define IRQGEN_IRQ_COUNT_REG_OFFSET 0x0000 // FIXME: check in the reference documentation
-# define IRQGEN_LATENCY_REG_OFFSET 0x0000 // FIXME: check in the reference documentation
+# define IRQGEN_GENIRQ_REG_OFFSET 0x0004 // FIXME: check in the reference documentation
+# define IRQGEN_IRQ_COUNT_REG_OFFSET 0x0008 // FIXME: check in the reference documentation
+# define IRQGEN_LATENCY_REG_OFFSET 0x000C // FIXME: check in the reference documentation
 
 # define IRQGEN_CTRL_REG      (irqgen_reg_base + IRQGEN_CTRL_REG_OFFSET)
 # define IRQGEN_GENIRQ_REG    (irqgen_reg_base + IRQGEN_GENIRQ_REG_OFFSET)
@@ -19,8 +19,8 @@
 /* --- bitfield defines for HW registers' fields --- */
 # include <linux/bitfield.h>         // bitfield macros for writing the HW registers
 
-# define IRQGEN_CTRL_REG_F_ENABLE             BIT(0) // FIXME: check in the reference documentation
-# define IRQGEN_CTRL_REG_F_HANDLED            BIT(0) // FIXME: check in the reference documentation
+# define IRQGEN_CTRL_REG_F_ENABLE             BIT(1) // FIXME: check in the reference documentation
+# define IRQGEN_CTRL_REG_F_HANDLED            BIT(1) // FIXME: check in the reference documentation
 # define IRQGEN_CTRL_REG_F_ACK        GENMASK( 1, 0) // FIXME: check in the reference documentation
 
 # define IRQGEN_GENIRQ_REG_F_LINE     GENMASK( 1, 0) // FIXME: check in the reference documentation

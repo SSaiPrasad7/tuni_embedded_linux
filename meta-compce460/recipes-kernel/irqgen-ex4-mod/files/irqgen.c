@@ -72,7 +72,7 @@ static irqreturn_t irqgen_irqhandler(int irq, void *data)
 
     // HINT: use iowrite32 and the bitfield macroes to modify the register fields
 
-    return IRQ_NONE; // FIXME: what should be returned on completion?
+    return IRQ_HANDLED; // FIXME: what should be returned on completion?
 }
 
 /* Enable the IRQ Generator */
@@ -82,6 +82,7 @@ void enable_irq_generator(void)
     printk(KERN_INFO KMSG_PFX "Enabling IRQ Generator.\n");
 #endif
     // HINT: use iowrite32 and the bitfield macroes to modify the register fields
+    iowrite32(3, IRQGEN_CTRL_REG);
 }
 
 /* Disable the IRQ Generator */
@@ -91,7 +92,12 @@ void disable_irq_generator(void)
     printk(KERN_INFO KMSG_PFX "Disabling IRQ Generator.\n");
 #endif
     // FIXME: set to zero the `amount` field, then disable the controller
+    u32 regvalue = 0
+                | FIELD_PREP(IRQGEN_GENIRQ_REG_F_AMOUNT,  amount)
+                | FIELD_PREP(IRQGEN_GENIRQ_REG_F_DELAY,    delay)
+                | FIELD_PREP(IRQGEN_GENIRQ_REG_F_LINE,      line);
     // HINT: use iowrite32 and the bitfield macroes to modify the register fields
+    iowrite32(,IRQGEN_GENIRQ_REG)
 }
 
 /* Generate specified amount of interrupts on specified IRQ_F2P line [IRQLINES_AMNT-1:0] */
@@ -119,6 +125,7 @@ u64 irqgen_read_latency(void)
 u32 irqgen_read_count(void)
 {
     // FIXME: use ioread32 to read the proper register
+    return ioread32(IRQGEN_IRQ_COUNT_REG);
 }
 
 // Debugging wrapper for request_irq()
@@ -156,7 +163,8 @@ static int32_t __init irqgen_init(void)
     }
 
     /* TODO: Map the IRQ Generator core register with ioremap */
-    irqgen_reg_base = NULL;
+    irqgen_reg_base =  ioremap(IRQGEN_CTRL_REG,2);
+   
     if (NULL == irqgen_reg_base) {
         printk(KERN_ERR KMSG_PFX "ioremap() failed.\n");
         retval = -EFAULT;
@@ -164,7 +172,7 @@ static int32_t __init irqgen_init(void)
     }
 
     /* TODO: Register the handle to the relevant IRQ number */
-    retval = _request_irq(/* FIXME: fill the first arguments */, &dummy);
+    retval = _request_irq(/* FIXME: fill the first arguments */IRQGEN_FIRST_IRQ, &dummy);
     if (retval != 0) {
         printk(KERN_ERR KMSG_PFX "request_irq() failed with return value %d while requesting IRQ id %u.\n",
                 retval, IRQGEN_FIRST_IRQ);

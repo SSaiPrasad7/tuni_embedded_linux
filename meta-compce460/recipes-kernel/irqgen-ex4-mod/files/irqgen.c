@@ -20,7 +20,7 @@
 #include "irqgen.h"                 // Shared module specific declarations
 
 /* Linux IRQ number for the first hwirq line */
-#define IRQGEN_FIRST_IRQ 0 // FIXME: find the right Linux IRQ number for the first hwirq of the device
+#define IRQGEN_FIRST_IRQ 45 // FIXME: find the right Linux IRQ number for the first hwirq of the device
 
 // Kernel token address to access the IRQ Generator core register
 void __iomem *irqgen_reg_base = NULL;
@@ -69,9 +69,13 @@ static irqreturn_t irqgen_irqhandler(int irq, void *data)
 #endif
 
     // FIXME: increment the `count_handled` counter before ACK
-
+    irqgen_data->count_handled+=1;
+    u32 regvalue = 0
+            | FIELD_PREP(IRQGEN_CTRL_REG_F_ENABLE, 1)
+            | FIELD_PREP(IRQGEN_CTRL_REG_F_HANDLED,1)
+            | FIELD_PREP(IRQGEN_CTRL_REG_F_ACK,1);
     // HINT: use iowrite32 and the bitfield macroes to modify the register fields
-
+    iowrite32(3, IRQGEN_CTRL_REG);
     return IRQ_HANDLED; // FIXME: what should be returned on completion?
 }
 
@@ -82,6 +86,10 @@ void enable_irq_generator(void)
     printk(KERN_INFO KMSG_PFX "Enabling IRQ Generator.\n");
 #endif
     // HINT: use iowrite32 and the bitfield macroes to modify the register fields
+     u32 regvalue = 0
+            | FIELD_PREP(IRQGEN_CTRL_REG_F_ENABLE, 1)
+            | FIELD_PREP(IRQGEN_CTRL_REG_F_HANDLED,0)
+            | FIELD_PREP(IRQGEN_CTRL_REG_F_ACK,0);
     iowrite32(3, IRQGEN_CTRL_REG);
 }
 
@@ -93,11 +101,11 @@ void disable_irq_generator(void)
 #endif
     // FIXME: set to zero the `amount` field, then disable the controller
     u32 regvalue = 0
-                | FIELD_PREP(IRQGEN_GENIRQ_REG_F_AMOUNT,  amount)
-                | FIELD_PREP(IRQGEN_GENIRQ_REG_F_DELAY,    delay)
-                | FIELD_PREP(IRQGEN_GENIRQ_REG_F_LINE,      line);
+                | FIELD_PREP(IRQGEN_GENIRQ_REG_F_AMOUNT,  0)
+                | FIELD_PREP(IRQGEN_GENIRQ_REG_F_DELAY,   loadtime_irq_delay)
+                | FIELD_PREP(IRQGEN_GENIRQ_REG_F_LINE,      0);
     // HINT: use iowrite32 and the bitfield macroes to modify the register fields
-    iowrite32(,IRQGEN_GENIRQ_REG)
+    iowrite32(regvalue,IRQGEN_GENIRQ_REG)
 }
 
 /* Generate specified amount of interrupts on specified IRQ_F2P line [IRQLINES_AMNT-1:0] */
@@ -163,7 +171,7 @@ static int32_t __init irqgen_init(void)
     }
 
     /* TODO: Map the IRQ Generator core register with ioremap */
-    irqgen_reg_base =  ioremap(IRQGEN_CTRL_REG,2);
+    irqgen_reg_base =  ioremap(IRQGEN_CTRL_REG,4);
    
     if (NULL == irqgen_reg_base) {
         printk(KERN_ERR KMSG_PFX "ioremap() failed.\n");

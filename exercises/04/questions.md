@@ -53,6 +53,7 @@
 - Bitfields Macros are easy to use for bit manipulation and safety purposes.
 
 ## 8. (BONUS, optional) Did you find any bug in the bitstream implementation while testing the sysfs interface?
+- No.
 
 ## 9. Feedback (what was difficult? what was easy? how would you improve it?)
 - It was bit difficult to understand the documentation. No need to improve.

@@ -37,7 +37,7 @@ void irqgen_sysfs_cleanup(void) { return; }
 static ssize_t count_handled_show(struct kobject *kobj, struct kobj_attribute *attr, char *buf)
 {
     // FIXME: write to buf (as a string) the value stored inside the module data structure
-    return sprintf(buf, "%s", count_handled);
+    return sprintf(buf, "%d", irqgen_data->count_handled);
 }
 IRQGEN_ATTR_RO(count_handled);
 

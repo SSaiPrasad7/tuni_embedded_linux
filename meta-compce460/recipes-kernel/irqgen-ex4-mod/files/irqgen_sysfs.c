@@ -46,7 +46,7 @@ static ssize_t enabled_show(struct kobject *kobj, struct kobj_attribute *attr, c
     // FIXME: read this value from the field in the CTRL register, print 1 or 0 a string to buf
     // HINT: check linux/bitfield.h to see how to use the bitfield macroes
     u32 value = ioread32(IRQGEN_CTRL_REG) & IRQGEN_CTRL_REG_F_ENABLE;
-    return sprintf(buf,"%s",value);
+    return sprintf(buf,"%d",value);
 }
 static ssize_t enabled_store(struct kobject *kobj, struct kobj_attribute *attr, const char *buf, size_t count)
 {

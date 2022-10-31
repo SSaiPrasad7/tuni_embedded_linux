@@ -70,10 +70,7 @@ static irqreturn_t irqgen_irqhandler(int irq, void *data)
 
     // FIXME: increment the `count_handled` counter before ACK
     irqgen_data->count_handled+=1;
-    u32 regvalue = 0
-            | FIELD_PREP(IRQGEN_CTRL_REG_F_ENABLE, 1)
-            | FIELD_PREP(IRQGEN_CTRL_REG_F_HANDLED,1)
-            | FIELD_PREP(IRQGEN_CTRL_REG_F_ACK,0);
+    u32 regvalue = 0|IRQGEN_CTRL_REG_F_ENABLE|IRQGEN_CTRL_REG_F_HANDLED;
     // HINT: use iowrite32 and the bitfield macroes to modify the register fields
     iowrite32(regvalue, IRQGEN_CTRL_REG);
     return IRQ_HANDLED; // FIXME: what should be returned on completion?
@@ -97,12 +94,11 @@ void disable_irq_generator(void)
     printk(KERN_INFO KMSG_PFX "Disabling IRQ Generator.\n");
 #endif
     // FIXME: set to zero the `amount` field, then disable the controller
-    u32 regvalue = 0
-                | FIELD_PREP(IRQGEN_GENIRQ_REG_F_AMOUNT,  0)
-                | FIELD_PREP(IRQGEN_GENIRQ_REG_F_DELAY,   loadtime_irq_delay)
-                | FIELD_PREP(IRQGEN_GENIRQ_REG_F_LINE,      0);
     // HINT: use iowrite32 and the bitfield macroes to modify the register fields
-    iowrite32(regvalue,IRQGEN_GENIRQ_REG);
+    u32 regvalue = ioread32(IRQGEN_GENIRQ_REG) & ~IRQGEN_GENIRQ_REG_F_AMOUNT; //set amount field to 0;	
+    iowrite32(regvalue, IRQGEN_GENIRQ_REG); // update IRQGEN_GENIRQ register	
+    regvalue = ioread32(IRQGEN_CTRL_REG) & ~IRQGEN_CTRL_REG_F_ENABLE; //set enable field to 0;	
+    iowrite32(regvalue, IRQGEN_CTRL_REG); // update IRQGEN_CTRL register
 }
 
 /* Generate specified amount of interrupts on specified IRQ_F2P line [IRQLINES_AMNT-1:0] */
@@ -123,7 +119,7 @@ void do_generate_irqs(uint16_t amount, uint8_t line, uint16_t delay)
 u64 irqgen_read_latency(void)
 {
     // not supported by current IP block implementation
-    return 0;
+    return ioread32(IRQGEN_LATENCY_REG) * 10;
 }
 
 // Returns the total generated IRQ count from IRQ_GEN_IRQ_COUNT_REG
@@ -208,7 +204,7 @@ static int32_t __init irqgen_init(void)
     free_irq(IRQGEN_FIRST_IRQ,&dummy);
  err_ioremap:
     // FIXME: free the appropriate resource when handling this error step
-    iounmap(IRQGEN_REG_PHYS_BASE);
+    iounmap(irqgen_data);
  err_alloc_irqgen_data:
  err_parse_parameters:
     printk(KERN_ERR KMSG_PFX "module initialization failed\n");
@@ -230,7 +226,8 @@ static void __exit irqgen_exit(void)
     disable_irq_generator();
     irqgen_sysfs_cleanup();   // FIXME: place this line in the right order
     free_irq(IRQGEN_FIRST_IRQ,&dummy);
-    iounmap(IRQGEN_REG_PHYS_BASE);
+    iounmap(irqgen_data);
+    kfree(irqgen_data);
     printk(KERN_INFO KMSG_PFX DRIVER_LNAME " exiting.\n");
 }
 
@@ -239,6 +236,8 @@ module_exit(irqgen_exit);
 
 MODULE_LICENSE("GPL");
 MODULE_DESCRIPTION("Module for the IRQ Generator IP block for the realtime systems course");
+MODULE_AUTHOR("Jan Lipponen <jan.lipponen@wapice.com>");	
+MODULE_AUTHOR("Nicola Tuveri <nicola.tuveri@tut.fi>");
 MODULE_AUTHOR("Sai Prasad Samudrala");
 MODULE_AUTHOR("Noman Akbar");
 MODULE_VERSION("0.2");

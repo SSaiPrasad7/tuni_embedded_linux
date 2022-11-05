@@ -21,10 +21,10 @@
 
 #include "irqgen.h"                 // Shared module specific declarations
 
-#define PROP_COMPATIBLE "" // FIXME: compatible property for the irqgen device from the devicetree
-#define PROP_WAPICE_INTRACK "" // FIXME: custom intrack property from the devicetree
+#define PROP_COMPATIBLE "wapice,irq-gen" //  compatible property for the irqgen device from the devicetree
+#define PROP_WAPICE_INTRACK "ACK1d ACK1e ACK1f ACK20 ACK21 ACK22 ACK23 ACK24  ACK34 ACK35 ACK36 ACK37 ACK38 ACK39 ACK3a ACK3b" //  custom intrack property from the devicetree
 
-#define FPGA_CLOCK_NS   0 /* 1000 / FPGA_CLOCK_MHZ */ // FIXME: how many nanoseconds is a FPGA clock cycle?
+#define FPGA_CLOCK_NS    1000 / FPGA_CLOCK_MHZ  // how many nanoseconds is a FPGA clock cycle?
 
 // Kernel token address to access the IRQ Generator core register
 void __iomem *irqgen_reg_base = NULL;
@@ -66,8 +66,8 @@ static int parse_parameters(void)
 // Returns the latency of last successfully served IRQ, in clock cycles
 static inline u32 irqgen_read_latency_clk(void)
 {
-    // FIXME: copy implementation from your EX04 solution
-    return 0;
+    // copy implementation from your EX04 solution
+    return ioread32(IRQGEN_LATENCY_REG);
 }
 
 static irqreturn_t irqgen_irqhandler(int irq, void *data)
@@ -98,13 +98,28 @@ static irqreturn_t irqgen_irqhandler(int irq, void *data)
 /* Enable the IRQ Generator */
 void enable_irq_generator(void)
 {
-    // FIXME: copy implementation from your EX04 solution
+    // copy implementation from your EX04 solution
+#ifdef DEBUG
+    printk(KERN_INFO KMSG_PFX "Enabling IRQ Generator.\n");
+#endif
+    //use iowrite32 and the bitfield macroes to modify the register fields
+     u32 regvalue = FIELD_PREP(IRQGEN_CTRL_REG_F_ENABLE, 1);
+     iowrite32(regvalue, IRQGEN_CTRL_REG);
 }
 
 /* Disable the IRQ Generator */
 void disable_irq_generator(void)
 {
-    // FIXME: copy implementation from your EX04 solution
+    // copy implementation from your EX04 solution
+#ifdef DEBUG
+    printk(KERN_INFO KMSG_PFX "Disabling IRQ Generator.\n");
+#endif
+    // set to zero the `amount` field, then disable the controller
+    // use iowrite32 and the bitfield macroes to modify the register fields
+    u32 regvalue = ioread32(IRQGEN_GENIRQ_REG) & ~IRQGEN_GENIRQ_REG_F_AMOUNT; //set amount field to 0;	
+    iowrite32(regvalue, IRQGEN_GENIRQ_REG); // update IRQGEN_GENIRQ register	
+    regvalue = ioread32(IRQGEN_CTRL_REG) & ~IRQGEN_CTRL_REG_F_ENABLE; //set enable field to 0;	
+    iowrite32(regvalue, IRQGEN_CTRL_REG); // update IRQGEN_CTRL register
 }
 
 /* Generate specified amount of interrupts on specified IRQ_F2P line [IRQLINES_AMNT-1:0] */
@@ -167,13 +182,22 @@ static int irqgen_probe(struct platform_device *pdev)
     int i;
     struct resource *iomem_range = NULL;
 
-    // FIXME: use DEVM_KZALLOC_HELPER to dinamically allocate irqgen_data (the pointers inside the structure will need separate allocations)
+    //use DEVM_KZALLOC_HELPER to dynamically allocate irqgen_data (the pointers inside the structure will need separate allocations)
+    DEVM_KZALLOC_HELPER(irqgen_data,pdev,1,GFP_KERNEL);
+    // platform_get_resource() (and error checking)
+    iomem_range = platform_get_resource(pdev, IORESOURCE_MEM, 0);
+    if (NULL == iomem_range) {
+        printk(KERN_ERR KMSG_PFX "platform_get_resource() failed.\n");
+        retval = -EFAULT;
+    }
+    //devm_ioremap_resource() (and error checking)
+    irqgen_base = devm_ioremap_resource(&pdev->dev, iomem_range);
+     if (NULL == irqgen_reg_base) {
+        printk(KERN_ERR KMSG_PFX "ioremap() failed.\n");
+        retval = -EFAULT;
+    }
 
-    // FIXME: platform_get_resource() (and error checking)
-
-    // FIXME: devm_ioremap_resource() (and error checking)
-
-#if 0 // FIXME: enable
+#if 1 // enable
     irqs_count = platform_irq_count(pdev);
     irqs_acks = of_property_count_u32_elems(pdev->dev.of_node, PROP_WAPICE_INTRACK);
 
@@ -206,7 +230,7 @@ static int irqgen_probe(struct platform_device *pdev)
                         pdev, irqs_count, GFP_KERNEL);
 
     irqgen_data->line_count = irqs_count;
-    retval = of_property_read_u32_array(/* FIXME */);
+    retval = of_property_read_u32_array(pdev->dev.of_node, PROP_WAPICE_INTRACK, irqs_acks,sizeof(irqs_acks));
     if (retval) {
         printk(KERN_ERR KMSG_PFX
                "Failed to read interrupt ack values from the device tree with %d.\n",
@@ -235,7 +259,7 @@ static int irqgen_probe(struct platform_device *pdev)
         irqgen_data->intr_idx[i] = i;
 
         /* Register the handle to the relevant IRQ number and the corresponding idx value */
-        retval = _devm_request_irq(/* FIXME */);
+        retval = _devm_request_irq(pdev->dev, irq_id , irqgen_irqhandler, 0 , "pynq", &i);
         if (retval != 0) {
             printk(KERN_ERR KMSG_PFX
                    "devm_request_irq() failed with return value %d "
@@ -256,6 +280,8 @@ static int irqgen_probe(struct platform_device *pdev)
 
  /* HINT: We are using devm_ resources: do we need to free them? */
  err_sysfs_setup:
+    irqgen_sysfs_cleanup(pdev);
+    return retval;
  err:
     printk(KERN_ERR KMSG_PFX "probe() failed\n");
     return retval;
@@ -263,7 +289,7 @@ static int irqgen_probe(struct platform_device *pdev)
 
 static int irqgen_remove(struct platform_device *pdev)
 {
-    //irqgen_sysfs_cleanup(pdev); // FIXME: enable
+    irqgen_sysfs_cleanup(pdev); // enable
 
     return 0;
 }
@@ -281,7 +307,11 @@ static int32_t __init irqgen_init(void)
         goto err_parse_parameters;
     }
 
-    // FIXME: something is missing here
+    retval = platform_driver_probe(irqgen_driver);
+    if (0 != retval) {
+        printk(KERN_ERR KMSG_PFX "driver not registered. \n");
+        goto err_platform_driver_probe;
+    }
 
     /* Enable the IRQ Generator */
     enable_irq_generator();
@@ -312,24 +342,35 @@ static void __exit irqgen_exit(void)
     /* Disable the IRQ Generator */
     disable_irq_generator();
 
-    /* FIXME: Unregister the platform driver and associated resources */
+    /* Unregister the platform driver and associated resources */
+    platform_driver_unregister(irqgen_driver);
 
     printk(KERN_INFO KMSG_PFX DRIVER_LNAME " exiting.\n");
 }
 
+// glue together the platform driver and the device-tree (use PROP_COMPATIBLE)
+static const struct of_device_id irqgen_of_ids[] = {
+	{ .compatible = PROP_COMPATIBLE,},
+	{/* end of list */}
+};
 
-
-
-
-// FIXME: glue together the platform driver and the device-tree (use PROP_COMPATIBLE)
-
+struct platform_driver irqgen_driver = {
+	.driver = {
+		.name = DEVICE_NAME,
+		.of_match_table = irqgen_of_ids,
+	},
+	.probe = irqgen_probe,
+	.remove = irqgen_remove,
+}
 
 module_init(irqgen_init);
 module_exit(irqgen_exit);
 
 MODULE_LICENSE("GPL");
 MODULE_DESCRIPTION("Module for the IRQ Generator IP block for the realtime systems course");
-// FIXME: add yourself among the authors
+// add yourself among the authors
+MODULE_AUTHOR("Sai Prasad Samudrala");
+MODULE_AUTHOR("Noman Akbar");
 MODULE_AUTHOR("Jan Lipponen <jan.lipponen@wapice.com>");
 MODULE_AUTHOR("Nicola Tuveri <nicola.tuveri@tut.fi>");
 MODULE_VERSION("0.6");

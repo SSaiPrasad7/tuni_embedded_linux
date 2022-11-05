@@ -29,7 +29,7 @@ void __iomem *irqgen_reg_base = NULL;
 struct irqgen_data *irqgen_data = NULL;
 
 // Dummy identifier for request_irq()
-static int dummy;
+static int dummy; 
 
 /* vvvv ---- LKM Parameters vvvv ---- */
 static unsigned int generate_irqs = 0;

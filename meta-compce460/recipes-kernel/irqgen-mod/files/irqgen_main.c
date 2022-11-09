@@ -22,7 +22,7 @@
 #include "irqgen.h"                 // Shared module specific declarations
 
 #define PROP_COMPATIBLE "wapice,irq-gen" //  compatible property for the irqgen device from the devicetree
-#define PROP_WAPICE_INTRACK "ACK1d ACK1e ACK1f ACK20 ACK21 ACK22 ACK23 ACK24  ACK34 ACK35 ACK36 ACK37 ACK38 ACK39 ACK3a ACK3b" //  custom intrack property from the devicetree
+#define PROP_WAPICE_INTRACK "ACK1D ACK1E ACK1F ACK20 ACK21 ACK22 ACK23 ACK24 ACK34 ACK35 ACK36 ACK37 ACK38 ACK39 ACK3A ACK3B" //  custom intrack property from the devicetree
 
 #define FPGA_CLOCK_NS    1000 / FPGA_CLOCK_MHZ  // how many nanoseconds is a FPGA clock cycle?
 
@@ -191,7 +191,7 @@ static int irqgen_probe(struct platform_device *pdev)
         retval = -EFAULT;
     }
     //devm_ioremap_resource() (and error checking)
-    irqgen_base = devm_ioremap_resource(&pdev->dev, iomem_range);
+    irqgen_reg_base = devm_ioremap_resource(&pdev->dev, iomem_range);
      if (NULL == irqgen_reg_base) {
         printk(KERN_ERR KMSG_PFX "ioremap() failed.\n");
         retval = -EFAULT;
@@ -259,7 +259,7 @@ static int irqgen_probe(struct platform_device *pdev)
         irqgen_data->intr_idx[i] = i;
 
         /* Register the handle to the relevant IRQ number and the corresponding idx value */
-        retval = _devm_request_irq(pdev->dev, irq_id , irqgen_irqhandler, 0 , "pynq", &i);
+        retval = _devm_request_irq(&pdev->dev, irq_id , irqgen_irqhandler, 0 , "pynq", &i);
         if (retval != 0) {
             printk(KERN_ERR KMSG_PFX
                    "devm_request_irq() failed with return value %d "
@@ -307,7 +307,7 @@ static int32_t __init irqgen_init(void)
         goto err_parse_parameters;
     }
 
-    retval = platform_driver_probe(irqgen_driver);
+    retval = platform_driver_probe(&irqgen_pdriver,irqgen_probe);
     if (0 != retval) {
         printk(KERN_ERR KMSG_PFX "driver not registered. \n");
         goto err_platform_driver_probe;
@@ -343,7 +343,7 @@ static void __exit irqgen_exit(void)
     disable_irq_generator();
 
     /* Unregister the platform driver and associated resources */
-    platform_driver_unregister(irqgen_driver);
+    platform_driver_unregister(&irqgen_pdriver);
 
     printk(KERN_INFO KMSG_PFX DRIVER_LNAME " exiting.\n");
 }
@@ -354,14 +354,14 @@ static const struct of_device_id irqgen_of_ids[] = {
 	{/* end of list */}
 };
 
-struct platform_driver irqgen_driver = {
+static struct platform_driver irqgen_pdriver = {
 	.driver = {
 		.name = DEVICE_NAME,
 		.of_match_table = irqgen_of_ids,
 	},
 	.probe = irqgen_probe,
 	.remove = irqgen_remove,
-}
+};
 
 module_init(irqgen_init);
 module_exit(irqgen_exit);
@@ -374,3 +374,4 @@ MODULE_AUTHOR("Noman Akbar");
 MODULE_AUTHOR("Jan Lipponen <jan.lipponen@wapice.com>");
 MODULE_AUTHOR("Nicola Tuveri <nicola.tuveri@tut.fi>");
 MODULE_VERSION("0.6");
+

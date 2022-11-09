@@ -22,7 +22,7 @@
 #include "irqgen.h"                 // Shared module specific declarations
 
 #define PROP_COMPATIBLE "wapice,irq-gen" //  compatible property for the irqgen device from the devicetree
-#define PROP_WAPICE_INTRACK "ACK1d ACK1e ACK1f ACK20 ACK21 ACK22 ACK23 ACK24 ACK34 ACK35 ACK36 ACK37 ACK38 ACK39 ACK3a ACK3b" //  custom intrack property from the devicetree
+#define PROP_WAPICE_INTRACK "wapice,intrack" //  custom intrack property from the devicetree
 
 #define FPGA_CLOCK_NS    1000 / FPGA_CLOCK_MHZ  // how many nanoseconds is a FPGA clock cycle?
 
@@ -184,6 +184,8 @@ static int irqgen_probe(struct platform_device *pdev)
 
     //use DEVM_KZALLOC_HELPER to dynamically allocate irqgen_data (the pointers inside the structure will need separate allocations)
     DEVM_KZALLOC_HELPER(irqgen_data,pdev,1,GFP_KERNEL);
+    DEVM_KZALLOC_HELPER(irqgen_data->latencies,pdev, MAX_LATENCIES, GFP_KERNEL);
+    
     // platform_get_resource() (and error checking)
     iomem_range = platform_get_resource(pdev, IORESOURCE_MEM, 0);
     if (NULL == iomem_range) {
@@ -230,7 +232,8 @@ static int irqgen_probe(struct platform_device *pdev)
                         pdev, irqs_count, GFP_KERNEL);
 
     irqgen_data->line_count = irqs_count;
-    retval = of_property_read_u32_array(pdev->dev.of_node, PROP_WAPICE_INTRACK, irqs_acks,sizeof(irqs_acks));
+
+    retval = of_property_read_u32_array(pdev->dev.of_node, PROP_WAPICE_INTRACK, irqgen_data->intr_acks,sizeof(irqgen_data->intr_acks));
     if (retval) {
         printk(KERN_ERR KMSG_PFX
                "Failed to read interrupt ack values from the device tree with %d.\n",

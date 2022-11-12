@@ -359,7 +359,7 @@ static void __exit irqgen_exit(void)
 
 // glue together the platform driver and the device-tree (use PROP_COMPATIBLE)
 static const struct of_device_id irqgen_of_ids[] = {
-	{ .compatible = PROP_COMPATIBLE,},
+	{ .compatible = PROP_COMPATIBLE},
 	{/* end of list */}
 };
 

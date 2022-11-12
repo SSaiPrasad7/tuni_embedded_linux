@@ -183,7 +183,7 @@ static int irqgen_probe(struct platform_device *pdev)
     struct resource *iomem_range = NULL;
 
     //use DEVM_KZALLOC_HELPER to dynamically allocate irqgen_data (the pointers inside the structure will need separate allocations)
-    DEVM_KZALLOC_HELPER(irqgen_data,pdev,1,GFP_KERNEL);
+    DEVM_KZALLOC_HELPER(irqgen_data, pdev, 1, GFP_KERNEL);
     DEVM_KZALLOC_HELPER(irqgen_data->latencies,pdev, MAX_LATENCIES, GFP_KERNEL);
     
     // platform_get_resource() (and error checking)
@@ -233,7 +233,7 @@ static int irqgen_probe(struct platform_device *pdev)
 
     irqgen_data->line_count = irqs_count;
 
-    retval = of_property_read_u32_array(pdev->dev.of_node, PROP_WAPICE_INTRACK, irqgen_data->intr_acks,sizeof(irqgen_data->intr_acks));
+    retval = of_property_read_u32_array(pdev->dev.of_node, PROP_WAPICE_INTRACK, irqgen_data->intr_acks,irqgen_data->line_count);
     if (retval) {
         printk(KERN_ERR KMSG_PFX
                "Failed to read interrupt ack values from the device tree with %d.\n",
@@ -262,7 +262,7 @@ static int irqgen_probe(struct platform_device *pdev)
         irqgen_data->intr_idx[i] = i;
 
         /* Register the handle to the relevant IRQ number and the corresponding idx value */
-        retval = _devm_request_irq(&pdev->dev, irq_id , irqgen_irqhandler, 0 , "pynq", &i);
+        retval = _devm_request_irq(&pdev->dev, irq_id , irqgen_irqhandler, IRQF_SHARED , "pynq", &i);
         if (retval != 0) {
             printk(KERN_ERR KMSG_PFX
                    "devm_request_irq() failed with return value %d "
@@ -321,7 +321,8 @@ static int32_t __init irqgen_init(void)
 
     if (generate_irqs > 0) {
         /* Generate IRQs (amount, line, delay) */
-        do_generate_irqs(generate_irqs, 0, loadtime_irq_delay);
+        for (uint8_t line = 0; line < irqgen_data->line_count; line++)
+            do_generate_irqs(generate_irqs, line, loadtime_irq_delay);
     }
 
     return 0;

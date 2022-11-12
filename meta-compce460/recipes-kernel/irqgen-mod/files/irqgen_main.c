@@ -24,7 +24,7 @@
 #define PROP_COMPATIBLE "wapice,irq-gen" //  compatible property for the irqgen device from the devicetree
 #define PROP_WAPICE_INTRACK "wapice,intrack" //  custom intrack property from the devicetree
 
-#define FPGA_CLOCK_NS    1000 / FPGA_CLOCK_MHZ  // how many nanoseconds is a FPGA clock cycle?
+#define FPGA_CLOCK_NS    10//1000 / FPGA_CLOCK_MHZ  // how many nanoseconds is a FPGA clock cycle?
 
 // Kernel token address to access the IRQ Generator core register
 void __iomem *irqgen_reg_base = NULL;
@@ -34,6 +34,9 @@ struct irqgen_data *irqgen_data = NULL;
 
 // Platform driver structure (initialized at the end of the file)
 static struct platform_driver irqgen_pdriver;
+
+static int irqgen_probe(struct platform_device *pdev);
+static int irqgen_remove(struct platform_device *pdev);
 
 /* vvvv ---- LKM Parameters vvvv ---- */
 static unsigned int generate_irqs = 0;
@@ -103,8 +106,9 @@ void enable_irq_generator(void)
     printk(KERN_INFO KMSG_PFX "Enabling IRQ Generator.\n");
 #endif
     //use iowrite32 and the bitfield macroes to modify the register fields
-     u32 regvalue = FIELD_PREP(IRQGEN_CTRL_REG_F_ENABLE, 1);
-     iowrite32(regvalue, IRQGEN_CTRL_REG);
+     //u32 regvalue = FIELD_PREP(IRQGEN_CTRL_REG_F_ENABLE, 1);
+     //iowrite32(regvalue, IRQGEN_CTRL_REG);
+     iowrite32(IRQGEN_CTRL_REG_F_ENABLE, IRQGEN_CTRL_REG);
 }
 
 /* Disable the IRQ Generator */
@@ -184,19 +188,21 @@ static int irqgen_probe(struct platform_device *pdev)
 
     //use DEVM_KZALLOC_HELPER to dynamically allocate irqgen_data (the pointers inside the structure will need separate allocations)
     DEVM_KZALLOC_HELPER(irqgen_data, pdev, 1, GFP_KERNEL);
-    DEVM_KZALLOC_HELPER(irqgen_data->latencies,pdev, MAX_LATENCIES, GFP_KERNEL);
+    DEVM_KZALLOC_HELPER(irqgen_data->latencies, pdev, MAX_LATENCIES, GFP_KERNEL);
     
     // platform_get_resource() (and error checking)
     iomem_range = platform_get_resource(pdev, IORESOURCE_MEM, 0);
     if (NULL == iomem_range) {
         printk(KERN_ERR KMSG_PFX "platform_get_resource() failed.\n");
         retval = -EFAULT;
+        goto err;
     }
     //devm_ioremap_resource() (and error checking)
     irqgen_reg_base = devm_ioremap_resource(&pdev->dev, iomem_range);
      if (NULL == irqgen_reg_base) {
         printk(KERN_ERR KMSG_PFX "ioremap() failed.\n");
         retval = -EFAULT;
+        goto err;
     }
 
 #if 1 // enable
@@ -262,7 +268,7 @@ static int irqgen_probe(struct platform_device *pdev)
         irqgen_data->intr_idx[i] = i;
 
         /* Register the handle to the relevant IRQ number and the corresponding idx value */
-        retval = _devm_request_irq(&pdev->dev, irq_id , irqgen_irqhandler, IRQF_SHARED , "pynq", &i);
+        retval = _devm_request_irq(&pdev->dev, irq_id , irqgen_irqhandler, IRQF_SHARED , DEVICE_NAME, &i);
         if (retval != 0) {
             printk(KERN_ERR KMSG_PFX
                    "devm_request_irq() failed with return value %d "
@@ -283,8 +289,6 @@ static int irqgen_probe(struct platform_device *pdev)
 
  /* HINT: We are using devm_ resources: do we need to free them? */
  err_sysfs_setup:
-    irqgen_sysfs_cleanup(pdev);
-    return retval;
  err:
     printk(KERN_ERR KMSG_PFX "probe() failed\n");
     return retval;
@@ -320,8 +324,9 @@ static int32_t __init irqgen_init(void)
     enable_irq_generator();
 
     if (generate_irqs > 0) {
+        int line = 0;
         /* Generate IRQs (amount, line, delay) */
-        for (uint8_t line = 0; line < irqgen_data->line_count; line++)
+        for(line = 0; line < irqgen_data->line_count; line++)
             do_generate_irqs(generate_irqs, line, loadtime_irq_delay);
     }
 

@@ -19,7 +19,24 @@ To understand platform drivers and device resources management.
 
 ## 6. What capabilities are exposed through the current sysfs interface of the `irqgen`? Describe the available entry points inside `/sys/kernel/irqgen` and their functions.
 
+  ```
+  amount
+  enabled
+  intr_ids
+  latency
+  total_handled
+  count_register
+  intr_acks
+  intr_idx
+  line
+  delay
+  intr_handled
+  latencies
+  line_count
+  ```
+
 ## 7. Are there code sections that are missing concurrency barriers? Where? Can you think of a way of triggering unintended behaviour?
+- I dont know the answer.
 
 ## 8. Feedback (what was difficult? what was easy? how would you improve it?)
 - It was difficult.Need some more time to do the exercise.

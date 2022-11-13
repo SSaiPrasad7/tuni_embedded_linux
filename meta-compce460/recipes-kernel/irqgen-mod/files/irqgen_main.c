@@ -24,7 +24,7 @@
 #define PROP_COMPATIBLE "wapice,irq-gen" //  compatible property for the irqgen device from the devicetree
 #define PROP_WAPICE_INTRACK "wapice,intrack" //  custom intrack property from the devicetree
 
-#define FPGA_CLOCK_NS    10//1000 / FPGA_CLOCK_MHZ  // how many nanoseconds is a FPGA clock cycle?
+#define FPGA_CLOCK_NS    10    //1000 / FPGA_CLOCK_MHZ  // how many nanoseconds is a FPGA clock cycle?
 
 // Kernel token address to access the IRQ Generator core register
 void __iomem *irqgen_reg_base = NULL;
@@ -359,7 +359,7 @@ static void __exit irqgen_exit(void)
 
 // glue together the platform driver and the device-tree (use PROP_COMPATIBLE)
 static const struct of_device_id irqgen_of_ids[] = {
-	{ .compatible = PROP_COMPATIBLE,},
+	{ .compatible = PROP_COMPATIBLE},
 	{/* end of list */}
 };
 
@@ -369,6 +369,7 @@ static struct platform_driver irqgen_pdriver = {
 		.of_match_table = irqgen_of_ids,
 	},
 	.probe = irqgen_probe,
+    
 	.remove = irqgen_remove,
 };
 
@@ -377,10 +378,8 @@ module_exit(irqgen_exit);
 
 MODULE_LICENSE("GPL");
 MODULE_DESCRIPTION("Module for the IRQ Generator IP block for the realtime systems course");
-// add yourself among the authors
 MODULE_AUTHOR("Sai Prasad Samudrala");
 MODULE_AUTHOR("Noman Akbar");
 MODULE_AUTHOR("Jan Lipponen <jan.lipponen@wapice.com>");
 MODULE_AUTHOR("Nicola Tuveri <nicola.tuveri@tut.fi>");
 MODULE_VERSION("0.6");
-

@@ -13,10 +13,9 @@
 #define ACK24 0x7
 #define ACK34 0x8
 #define ACK35 0x9
-#define ACK36 0xa
-#define ACK37 0xb
-#define ACK38 0xc
-#define ACK39 0xd
-#define ACK3A 0xe
-#define ACK3B 0xf
-
+#define ACK36 0xA
+#define ACK37 0xB
+#define ACK38 0xC
+#define ACK39 0xD
+#define ACK3A 0xE
+#define ACK3B 0xF

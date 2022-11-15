@@ -24,11 +24,7 @@
 #define PROP_COMPATIBLE "wapice,irq-gen" //compatible property for the irqgen device from the devicetree
 #define PROP_WAPICE_INTRACK "wapice,intrack" // custom intrack property from the devicetree
 
-<<<<<<< HEAD
-#define FPGA_CLOCK_NS    10    //1000 / FPGA_CLOCK_MHZ  // how many nanoseconds is a FPGA clock cycle?
-=======
-#define FPGA_CLOCK_NS  10 /* 1000 / FPGA_CLOCK_MHZ(125MHz) */ //how many nanoseconds is a FPGA clock cycle?
->>>>>>> fda9459489a1b4c2a79c8106ad61fd2a05555a1d
+#define FPGA_CLOCK_NS  10 //how many nanoseconds is a FPGA clock cycle?
 
 // Kernel token address to access the IRQ Generator core register
 void __iomem *irqgen_reg_base = NULL;
@@ -268,7 +264,7 @@ static int irqgen_probe(struct platform_device *pdev)
         irqgen_data->intr_idx[i] = i;
 
         /* Register the handle to the relevant IRQ number and the corresponding idx value */
-        retval = _devm_request_irq(&pdev->dev, irq_id, irqgen_irqhandler, 4, DEVICE_NAME, &irqgen_data->intr_idx[i]);
+        retval = _devm_request_irq(&pdev->dev, irq_id, irqgen_irqhandler, IRQF_SHARED, DEVICE_NAME, &irqgen_data->intr_idx[i]);
         if (retval != 0) {
             printk(KERN_ERR KMSG_PFX
                    "devm_request_irq() failed with return value %d "
@@ -296,8 +292,6 @@ static int irqgen_probe(struct platform_device *pdev)
 static int irqgen_remove(struct platform_device *pdev)
 {
     irqgen_sysfs_cleanup(pdev); //enable
-    
-    platform_device_unregister(pdev);
     
 	printk(KERN_ERR KMSG_PFX "remove() called");
     return 0;
@@ -329,8 +323,7 @@ static int32_t __init irqgen_init(void)
     if (generate_irqs > 0) {
 		int line = 0;
 		/* Generate IRQs (amount, line, delay) */
-        for(line = 0; line < irqgen_data->line_count; line++)
-        do_generate_irqs(generate_irqs, line, loadtime_irq_delay);
+        do_generate_irqs(generate_irqs, 0, loadtime_irq_delay);
     }
 
     return 0;
@@ -373,7 +366,6 @@ static struct platform_driver irqgen_pdriver = {
 		.of_match_table = irqgen_of_ids,
 	},
 	.probe = irqgen_probe,
-    
 	.remove = irqgen_remove,
 };
 

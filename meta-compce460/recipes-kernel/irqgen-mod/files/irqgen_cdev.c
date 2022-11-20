@@ -16,7 +16,7 @@
 # include <linux/cdev.h>             // Header for character devices support
 # include <linux/fs.h>               // Header for Linux file system support
 # include <linux/uaccess.h>          // Header for userspace access support
-
+#include <linux/spinlock.h>
 # include "irqgen.h"                 // Shared module specific declarations
 
 #define IRQGEN_CDEV_CLASS "irqgen-class"
@@ -26,8 +26,8 @@ struct irqgen_chardev {
     dev_t devt;
     struct device *dev;
     struct class *class;
-
-    // TODO: do we need a sync mechanism for any cdev operation?
+    // do we need a sync mechanism for any cdev operation?
+    spinlock_t lock;
 };
 
 static struct irqgen_chardev irqgen_chardev;
@@ -47,31 +47,63 @@ static struct file_operations fops = {
 int irqgen_cdev_setup(struct platform_device *pdev)
 {
     int ret;
+	printk(KERN_INFO "CHARDEV: irqgen_cdev_setup start"); 
 
     cdev_init(&irqgen_chardev.cdev, &fops);
     irqgen_chardev.cdev.owner = THIS_MODULE;
     irqgen_chardev.cdev.kobj.parent = &pdev->dev.kobj;
 
-    // TODO: dinamically allocate a major and a minor for this chrdev
+    // dynamically allocate a major and a minor for this chrdev
     // don't forget error handling
+	 ret = alloc_chrdev_region(&irqgen_chardev.devt, 0, 16, DRIVER_NAME);
+	 if(ret < 0)
+	 {
+		printk(KERN_ERR KMSG_PFX "CHARDEV: Cannot allocate major number for device\n");
+		goto err_alloc_chrdev_region;
+	 }
 
-    // TODO: add to the system the cdev for the allocated (major,minor)
+    // add to the system the cdev for the allocated (major,minor)
     // don't forget error handling
+	ret = cdev_add( &irqgen_chardev.cdev,irqgen_chardev.devt,16);
+	if(ret < 0 ) 
+	{
+		printk(KERN_ERR KMSG_PFX "CHARDEV: Unable to add cdev");
+		goto err_cdev_add;
+	}
 
     // Add an "irqgen" node in the /dev/ filesystem (hint: device_create())
     // don't forget error handling
+	irqgen_chardev.dev  = device_create(&irqgen_chardev.class, NULL, irqgen_chardev.devt, NULL,DRIVER_NAME);
+	if(irqgen_chardev.dev == NULL)
+	{
+		printk(KERN_ERR KMSG_PFX "CHARDEV: Cannot create the device\n");
+		goto err_device_create;
+	}
 
-    // TODO: do we need a sync mechanism for any cdev operation?
-
+    // do we need a sync mechanism for any cdev operation?
+	spin_lock_init(irqgen_chardev.lock);
     return 0;
-
-    // TODO: use labels to handle errors and undo any resource allocation
+	
+		
+    // use labels to handle errors and undo any resource allocation
+	err_device_create:
+		device_destroy (irqgen_chardev.class,irqgen_chardev.devt);
+	err_cdev_add:
+		cdev_del(&irqgen_chardev.cdev); 
+	err_alloc_chrdev_region:
+		unregister_chrdev_region(irqgen_chardev.devt, 16);
+		
+    return ret;
 }
 
 void irqgen_cdev_cleanup(struct platform_device *pdev)
 {
     // destroy, unregister and free, in the right order, all resources
     // allocated in irqgen_cdev_setup()
+    device_destroy (irqgen_chardev.class,irqgen_chardev.devt);
+    cdev_del(&irqgen_chardev.cdev);
+    unregister_chrdev_region(irqgen_chardev.devt, 16);
+    printk(KERN_INFO "irqgen_cdev_cleanup done\n"); 
 }
 
 static u8 already_opened = 0;

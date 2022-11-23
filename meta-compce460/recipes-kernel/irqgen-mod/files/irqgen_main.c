@@ -119,11 +119,13 @@ static irqreturn_t irqgen_irqhandler(int irq, void *data)
     latency = irqgen_read_latency_clk();
 
     // TODO: handle concurrency
+    spin_lock(&irqgen_data->data_lock);
     // {{{ CRITICAL SECTION
     ++irqgen_data->total_handled;
     ++irqgen_data->intr_handled[idx];
     irqgen_data_push_latency(idx, latency, timestamp);
     // }}}
+    spin_unlock(&irqgen_data->data_lock);
 
     return IRQ_HANDLED; 
 }
@@ -217,6 +219,8 @@ static int irqgen_probe(struct platform_device *pdev)
     DEVM_KZALLOC_HELPER(irqgen_data->latencies, pdev, MAX_LATENCIES, GFP_KERNEL);
 
     // TODO: how to protect the shared r/w members of irqgen_data?
+    spin_lock_init(&irqgen_data->data_lock);
+
 
     iomem_range = platform_get_resource(pdev, IORESOURCE_MEM, 0);
     if (IS_ERR(iomem_range)) {

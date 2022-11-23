@@ -27,7 +27,7 @@ struct irqgen_chardev {
     struct device *dev;
     struct class *class;
     // do we need a sync mechanism for any cdev operation?
-    spinlock_t lock;
+    spinlock_t lock_char_device;
 };
 
 static struct irqgen_chardev irqgen_chardev;
@@ -47,7 +47,7 @@ static struct file_operations fops = {
 int irqgen_cdev_setup(struct platform_device *pdev)
 {
     int ret;
-	printk(KERN_INFO "CHARDEV: irqgen_cdev_setup start"); 
+	printk(KERN_INFO "CHARDEV: irqgen_cdev_setup start\n"); 
 
     cdev_init(&irqgen_chardev.cdev, &fops);
     irqgen_chardev.cdev.owner = THIS_MODULE;
@@ -55,7 +55,7 @@ int irqgen_cdev_setup(struct platform_device *pdev)
 
     // dynamically allocate a major and a minor for this chrdev
     // don't forget error handling
-	 ret = alloc_chrdev_region(&irqgen_chardev.devt, 0, 16, DRIVER_NAME);
+	 ret = alloc_chrdev_region(&irqgen_chardev.devt, 0, 1, DRIVER_NAME);
 	 if(ret < 0)
 	 {
 		printk(KERN_ERR KMSG_PFX "CHARDEV: Cannot allocate major number for device\n");
@@ -64,7 +64,7 @@ int irqgen_cdev_setup(struct platform_device *pdev)
 
     // add to the system the cdev for the allocated (major,minor)
     // don't forget error handling
-	ret = cdev_add( &irqgen_chardev.cdev,irqgen_chardev.devt,16);
+	ret = cdev_add( &irqgen_chardev.cdev,irqgen_chardev.devt,1);
 	if(ret < 0 ) 
 	{
 		printk(KERN_ERR KMSG_PFX "CHARDEV: Unable to add cdev");
@@ -73,25 +73,26 @@ int irqgen_cdev_setup(struct platform_device *pdev)
 
     // Add an "irqgen" node in the /dev/ filesystem (hint: device_create())
     // don't forget error handling
-	irqgen_chardev.dev  = device_create(&irqgen_chardev.class, NULL, irqgen_chardev.devt, NULL,DRIVER_NAME);
-	if(irqgen_chardev.dev == NULL)
+        irqgen_chardev.class = class_create(THIS_MODULE,IRQGEN_CDEV_CLASS); 
+	ret  = device_create(irqgen_chardev.class, NULL, irqgen_chardev.devt, NULL,DRIVER_NAME);
+	if(ret == NULL)
 	{
 		printk(KERN_ERR KMSG_PFX "CHARDEV: Cannot create the device\n");
 		goto err_device_create;
 	}
 
     // do we need a sync mechanism for any cdev operation?
-	spin_lock_init(irqgen_chardev.lock);
+	spin_lock_init(&irqgen_chardev.lock_char_device);
     return 0;
 	
 		
     // use labels to handle errors and undo any resource allocation
 	err_device_create:
-		device_destroy (irqgen_chardev.class,irqgen_chardev.devt);
+		device_destroy(irqgen_chardev.class,irqgen_chardev.devt);
 	err_cdev_add:
 		cdev_del(&irqgen_chardev.cdev); 
 	err_alloc_chrdev_region:
-		unregister_chrdev_region(irqgen_chardev.devt, 16);
+		unregister_chrdev_region(irqgen_chardev.devt, 1);
 		
     return ret;
 }
@@ -102,8 +103,8 @@ void irqgen_cdev_cleanup(struct platform_device *pdev)
     // allocated in irqgen_cdev_setup()
     device_destroy (irqgen_chardev.class,irqgen_chardev.devt);
     cdev_del(&irqgen_chardev.cdev);
-    unregister_chrdev_region(irqgen_chardev.devt, 16);
-    printk(KERN_INFO "irqgen_cdev_cleanup done\n"); 
+    unregister_chrdev_region(irqgen_chardev.devt, 1);
+    printk(KERN_INFO "CHARDEV:irqgen_cdev_cleanup done\n"); 
 }
 
 static u8 already_opened = 0;
@@ -113,11 +114,14 @@ static int irqgen_cdev_open(struct inode *inode, struct file *f)
 # ifdef DEBUG
     printk(KERN_DEBUG KMSG_PFX "irqgen_cdev_open() called.\n");
 # endif
-
+	spin_lock(&irqgen_chardev.lock_char_device);
     if (already_opened) {
+	spin_unlock(&irqgen_chardev.lock_char_device);
         return -EBUSY;
     }
     already_opened = 1;
+    spin_unlock(&irqgen_chardev.lock_char_device);
+
     return 0;
 }
 
@@ -126,11 +130,14 @@ static int irqgen_cdev_release(struct inode *inode, struct file *f)
 # ifdef DEBUG
     printk(KERN_DEBUG KMSG_PFX "irqgen_cdev_release() called.\n");
 # endif
-
+    spin_lock(&irqgen_chardev.lock_char_device);
     if (!already_opened) {
+	    spin_unlock(&irqgen_chardev.lock_char_device);
         return -ECANCELED;
     }
     already_opened = 0;
+    spin_unlock(&irqgen_chardev.lock_char_device);
+
     return 0;
 }
 
@@ -155,15 +162,17 @@ static ssize_t irqgen_cdev_read(struct file *fp, char *ubuf, size_t count, loff_
     }
 
     // TODO: how to protect access to shared r/w members of irqgen_data?
-
+	spin_lock(&irqgen_data->data_lock);
+	
     if (irqgen_data->rp == irqgen_data->wp) {
         // Nothing to read
+	spin_unlock(&irqgen_data->data_lock);
         return 0;
     }
 
     v = irqgen_data->latencies[irqgen_data->rp];
     irqgen_data->rp = (irqgen_data->rp + 1)%MAX_LATENCIES;
-
+	spin_unlock(&irqgen_data->data_lock);
     ret = scnprintf(kbuf, KBUF_SIZE, "%u,%lu,%llu\n", v.line, v.latency, v.timestamp);
     if (ret < 0) {
         goto end;
@@ -173,6 +182,7 @@ static ssize_t irqgen_cdev_read(struct file *fp, char *ubuf, size_t count, loff_
     }
 
     // TODO: how to transfer from kernel space to user space?
+    if(copy_to_user(ubuf,kbuf,KBUF_SIZE)!=0) goto end;
     *f_pos += ret;
 
  end:

@@ -119,13 +119,13 @@ static irqreturn_t irqgen_irqhandler(int irq, void *data)
     latency = irqgen_read_latency_clk();
 
     // TODO: handle concurrency
-    spin_lock(&irqgen_data->data_lock);
+    spin_lock_irq(&irqgen_data->data_lock);
     // {{{ CRITICAL SECTION
     ++irqgen_data->total_handled;
     ++irqgen_data->intr_handled[idx];
     irqgen_data_push_latency(idx, latency, timestamp);
     // }}}
-    spin_unlock(&irqgen_data->data_lock);
+    spin_unlock_irq(&irqgen_data->data_lock);
 
     return IRQ_HANDLED; 
 }
@@ -166,7 +166,7 @@ void do_generate_irqs(uint16_t amount, uint8_t line, uint16_t delay)
 
     iowrite32(regvalue, IRQGEN_GENIRQ_REG);
     
-    printk(KERN_INFO KMSG_PFX "do_generate_irqs exit.\n");
+    //printk(KERN_INFO KMSG_PFX "do_generate_irqs exit.\n");
 }
 
 // Returns the latency of last successfully served IRQ, in ns

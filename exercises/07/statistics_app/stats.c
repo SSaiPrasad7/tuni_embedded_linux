@@ -21,6 +21,12 @@ struct stats_data
     double avg_latency;
     uint32_t worst_latency;
 };
+struct overall_stats_data
+{
+    uint64_t event_count;
+    double avg_latency;
+    uint32_t worst_latency;
+};
 
 void sig_handler(int signal)
 {
@@ -30,11 +36,11 @@ void sig_handler(int signal)
 int main()
 {
     struct latency_data ld = {0};
-    struct stats_data sd[20] = {0};
+    struct stats_data sd[16] = {0};
+    struct overall_stats_data total = {0};
     char *line = NULL;
     size_t len = 0;
     ssize_t lineSize = 0;
-    uint8_t line_count = 0; 
     signal(SIGINT, sig_handler);
 
    for(;;)
@@ -45,28 +51,29 @@ int main()
 		if(stat_flag)
 		{
 			printf("-----------------------------------------------------------------------------------------\n");
-			for(int i = 0; i <= line_count; i++)
+			for(int i = 0; i < 16; i++)
 			{
-				printf("IRQ line: %d Events occured : %lu Average Latency: %lf worst_latency: %d\n" , sd[i].line , sd[i].event_count , sd[i].avg_latency , sd[i].worst_latency);
+				sd[i].avg_latency = (sd[i].avg_latency)/(sd[i].event_count);
+				total.event_count += sd[i].event_count;
+				if(sd[i].avg_latency > 0)
+					total.avg_latency += sd[i].avg_latency;
+				total.worst_latency = (sd[i].worst_latency > total.worst_latency) ?  (sd[i].worst_latency ) : (total.worst_latency);
+				printf("IRQ line: %u Events occured : %lu Average Latency: %lf worst_latency: %u\n" , sd[i].line , sd[i].event_count , sd[i].avg_latency , sd[i].worst_latency);
 			}
+			total.avg_latency = total.avg_latency /total.event_count;
+			printf("Overall Events occured : %lu Average Latency: %lf worst_latency: %u\n" , total.event_count , total.avg_latency , total.worst_latency);
 			printf("-----------------------------------------------------------------------------------------\n");
 			stat_flag = false;
 			free(line);
 			return 0;
 		};
 		
-		
 		sscanf(line, "%hhd,%d,%ld" ,&ld.line, &ld.latency, &ld.timestamp);
-
-		if(ld.line != line_count)
-		{
-			sd[line_count].avg_latency = sd[line_count].avg_latency/sd[line_count].event_count;
-			line_count = ld.line;
-		}
 		
-		sd[line_count].line = ld.line;
-		sd[line_count].event_count += 1;
-		sd[line_count].avg_latency = ld.latency;
-		sd[line_count].worst_latency = (ld.latency > sd[line_count].worst_latency) ?  (ld.latency) : (sd[line_count].worst_latency);
+		sd[ld.line].line = ld.line;
+		sd[ld.line].event_count += 1;
+		sd[ld.line].avg_latency += ld.latency;
+
+		sd[ld.line].worst_latency = (ld.latency > sd[ld.line].worst_latency) ?  (ld.latency) : (sd[ld.line].worst_latency);
     }
 }

@@ -27,7 +27,6 @@ struct irqgen_chardev {
     struct device *dev;
     struct class *class;
     // do we need a sync mechanism for any cdev operation?
-    spinlock_t lock_char_device;
 };
 
 static struct irqgen_chardev irqgen_chardev;
@@ -82,7 +81,6 @@ int irqgen_cdev_setup(struct platform_device *pdev)
 	}
 
     // do we need a sync mechanism for any cdev operation?
-	spin_lock_init(&irqgen_chardev.lock_char_device);
     return 0;
 	
 		
@@ -114,13 +112,10 @@ static int irqgen_cdev_open(struct inode *inode, struct file *f)
 # ifdef DEBUG
     printk(KERN_DEBUG KMSG_PFX "irqgen_cdev_open() called.\n");
 # endif
-	spin_lock(&irqgen_chardev.lock_char_device);
     if (already_opened) {
-	spin_unlock(&irqgen_chardev.lock_char_device);
         return -EBUSY;
     }
     already_opened = 1;
-    spin_unlock(&irqgen_chardev.lock_char_device);
 
     return 0;
 }
@@ -130,13 +125,11 @@ static int irqgen_cdev_release(struct inode *inode, struct file *f)
 # ifdef DEBUG
     printk(KERN_DEBUG KMSG_PFX "irqgen_cdev_release() called.\n");
 # endif
-    spin_lock(&irqgen_chardev.lock_char_device);
+
     if (!already_opened) {
-	    spin_unlock(&irqgen_chardev.lock_char_device);
         return -ECANCELED;
     }
     already_opened = 0;
-    spin_unlock(&irqgen_chardev.lock_char_device);
 
     return 0;
 }
@@ -162,17 +155,17 @@ static ssize_t irqgen_cdev_read(struct file *fp, char *ubuf, size_t count, loff_
     }
 
     // TODO: how to protect access to shared r/w members of irqgen_data?
-	spin_lock(&irqgen_data->data_lock);
+	spin_lock_irq(&irqgen_data->data_lock);
 	
     if (irqgen_data->rp == irqgen_data->wp) {
         // Nothing to read
-	spin_unlock(&irqgen_data->data_lock);
+		spin_unlock_irq(&irqgen_data->data_lock);
         return 0;
     }
 
     v = irqgen_data->latencies[irqgen_data->rp];
     irqgen_data->rp = (irqgen_data->rp + 1)%MAX_LATENCIES;
-	spin_unlock(&irqgen_data->data_lock);
+	spin_unlock_irq(&irqgen_data->data_lock);
     ret = scnprintf(kbuf, KBUF_SIZE, "%u,%lu,%llu\n", v.line, v.latency, v.timestamp);
     if (ret < 0) {
         goto end;

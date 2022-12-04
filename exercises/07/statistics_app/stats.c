@@ -54,11 +54,12 @@ int main()
 			for(int i = 0; i < 16; i++)
 			{
 				sd[i].avg_latency = (sd[i].avg_latency)/(sd[i].event_count);
+				printf("IRQ line: %u Events occured : %lu Average Latency: %lf worst_latency: %u\n" , sd[i].line , sd[i].event_count , sd[i].avg_latency , sd[i].worst_latency);
+				
 				total.event_count += sd[i].event_count;
+				total.worst_latency = (sd[i].worst_latency > total.worst_latency) ?  (sd[i].worst_latency ) : (total.worst_latency);
 				if(sd[i].avg_latency > 0)
 					total.avg_latency += sd[i].avg_latency;
-				total.worst_latency = (sd[i].worst_latency > total.worst_latency) ?  (sd[i].worst_latency ) : (total.worst_latency);
-				printf("IRQ line: %u Events occured : %lu Average Latency: %lf worst_latency: %u\n" , sd[i].line , sd[i].event_count , sd[i].avg_latency , sd[i].worst_latency);
 			}
 			total.avg_latency = total.avg_latency /total.event_count;
 			printf("Overall Events occured : %lu Average Latency: %lf worst_latency: %u\n" , total.event_count , total.avg_latency , total.worst_latency);

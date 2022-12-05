@@ -29,4 +29,3 @@ sleep 5
 
 # Might not work -> Use ps to find process id and kill it manually
 kill -INT %1
-

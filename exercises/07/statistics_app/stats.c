@@ -36,7 +36,7 @@ void sig_handler(int signal)
 int main()
 {
     struct latency_data ld = {0};
-    struct stats_data sd[16] = {0};
+    struct stats_data sd[20] = {0};
     struct overall_stats_data total = {0};
     char *line = NULL;
     size_t len = 0;
@@ -45,8 +45,6 @@ int main()
 
    for(;;)
     {
-		//printf("Enter the line:\n");
-		
 		lineSize = getline(&line, &len, stdin);
 		if(stat_flag)
 		{
@@ -57,9 +55,8 @@ int main()
 				printf("IRQ line: %u Events occured : %lu Average Latency: %lf worst_latency: %u\n" , sd[i].line , sd[i].event_count , sd[i].avg_latency , sd[i].worst_latency);
 				
 				total.event_count += sd[i].event_count;
-				total.worst_latency = (sd[i].worst_latency > total.worst_latency) ?  (sd[i].worst_latency ) : (total.worst_latency);
-				if(sd[i].avg_latency > 0)
-					total.avg_latency += sd[i].avg_latency;
+				total.avg_latency += sd[i].avg_latency;
+				total.worst_latency = (sd[i].worst_latency > total.worst_latency) ?  (sd[i].worst_latency ) : (total.worst_latency);	
 			}
 			total.avg_latency = total.avg_latency /total.event_count;
 			printf("Overall Events occured : %lu Average Latency: %lf worst_latency: %u\n" , total.event_count , total.avg_latency , total.worst_latency);
@@ -67,14 +64,14 @@ int main()
 			stat_flag = false;
 			free(line);
 			return 0;
-		};
-		
-		sscanf(line, "%hhd,%d,%ld" ,&ld.line, &ld.latency, &ld.timestamp);
-		
-		sd[ld.line].line = ld.line;
-		sd[ld.line].event_count += 1;
-		sd[ld.line].avg_latency += ld.latency;
-
-		sd[ld.line].worst_latency = (ld.latency > sd[ld.line].worst_latency) ?  (ld.latency) : (sd[ld.line].worst_latency);
+		}
+		if(lineSize !=-1)
+		{
+			sscanf(line, "%hhd,%d,%ld" ,&ld.line, &ld.latency, &ld.timestamp);
+			sd[ld.line].line = ld.line;
+			sd[ld.line].event_count += 1;
+			sd[ld.line].avg_latency += ld.latency;
+			sd[ld.line].worst_latency = (ld.latency > sd[ld.line].worst_latency) ?  (ld.latency) : (sd[ld.line].worst_latency);
+		}
     }
 }

@@ -57,17 +57,17 @@ Overall Results:
 ## 6. Compare the plots for the 6 different profiles. Describe each of them and compare them?
 - These plots represent the IRQ latency on line 5(hw_irq:51) interrupt.
 ### Graph 1 (No RT No Torture)
-- The spikes are more in this graph, these represents random behaviour.
-
+- The spikes in this graph represents the worst latency. It is higher.
 ### Graph 2 (No RT Torture)
-
+- We do the stress test and make CPU load to 100%. The behaviour is same as No RT NO torture even when the load is applied.
 ### Graph 3 (RT No Torture)
-
+- The average latency increased compared to No RT, No torture because of scheduling overhead.
 ### Graph 4 (RT Torture)
-
+- The average latency is high .The worst latency is decreased compared with No RT,torture
 ### Graph 5 (Tuned RT No Torture)
-
+- The interrupt line runs as high priority thread, this increases the performance and the latency decreases.
 ### Graph 6 (Tuned RT Torture)
+- The worst latency is decreased when compared with RT,torture.
 
 ## 7. Document the RT performance differences and their reasons
 |                     | no RT, no torture |no RT, torture | RT, no torture | RT, torture |tuned RT, no torture | tuned RT, torture |
